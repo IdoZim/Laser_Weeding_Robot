@@ -1,0 +1,66 @@
+def calculate_angles(box_3d):
+    # Calculate vectors for two sides of the rectangle
+    vec1 = np.subtract(box_3d[1], box_3d[0])
+    vec2 = np.subtract(box_3d[2], box_3d[1])
+
+    # Calculate the normal vector of the rectangle's plane
+    normal_vector = np.cross(vec1, vec2)
+    normal_vector = normal_vector / np.linalg.norm(normal_vector)  # Normalize the vector
+
+    # Calculate angles with respect to the camera's coordinate system
+    angle_x = math.degrees(math.atan2(normal_vector[1], normal_vector[2]))
+    angle_y = math.degrees(math.atan2(normal_vector[0], normal_vector[2]))
+    angle_z = math.degrees(math.atan2(normal_vector[0], normal_vector[1]))
+    return [angle_x, angle_y, angle_z]
+
+def save_current_frame():
+    global current_frame, relative_xyz, relative_angles
+    if current_frame is not None:
+        return relative_xyz, relative_angles
+def update_frame():
+    global current_frame, relative_xyz, relative_angles
+    while True:
+        frames = pipeline.wait_for_frames()
+        aligned_frames = align.process(frames)
+        aligned_color_frame = aligned_frames.get_color_frame()
+        color_image = np.asanyarray(aligned_color_frame.get_data())
+        depth = frames.get_depth_frame()
+
+        # Convert BGR to HSV for color detection
+        hsv_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2HSV)
+        green_range = ((35, 40, 40), (105, 150, 255))
+        mask = cv2.inRange(hsv_image, green_range[0], green_range[1])
+
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours:
+            contArea = cv2.contourArea(contour)
+            if contArea > 35:
+                rect = cv2.minAreaRect(contour)
+                box = cv2.boxPoints(rect)
+                box = np.int0(box)
+                cv2.drawContours(color_image,[box],0,(0,0,255),2)
+                # M = cv2.moments(contour)
+                # cx = int(M['m10']/M['m00'])
+                # cy = int(M['m01']/M['m00'])
+                cx, cy = rect[0]
+                cx, cy = int(cx), int(cy)
+                z_depth = depth.get_distance(int(cx), int(cy))
+                # Deproject the pixel to a 3D point
+                intrinsics = depth.profile.as_video_stream_profile().intrinsics
+                point_in_3d = rs.rs2_deproject_pixel_to_point(intrinsics, [cx, cy], z_depth)
+                cv2.circle(color_image, (cx,cy),3, (0,255,0),thickness=1)
+                cv2.circle(color_image, frame_center,3, (0,255,255),thickness=1)
+                print_str = point_in_3d.__str__()
+                cv2.putText(color_image, print_str, (cx-200, cy - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
+                box_3d = [rs.rs2_deproject_pixel_to_point(intrinsics, pt, depth.get_distance(int(pt[0]), int(pt[1]))) for pt in box]
+                relative_angles = calculate_angles(box_3d)
+                angles_print = relative_angles.__str__()
+                cv2.putText(color_image, angles_print, (cx-200, cy - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
+        relative_xyz = [float(point_in_3d[0]), float(point_in_3d[1]), float(point_in_3d[2])]
+        current_frame = color_image
+
+
+box_3d = [rs.rs2_deproject_pixel_to_point(intrinsics, pt, depth.get_distance(int(pt[0]), int(pt[1]))) for pt in box]
+                relative_angles = calculate_angles(box_3d)
+                angles_print = relative_angles.__str__()
+                cv2.putText(color_image, angles_print, (cx-200, cy - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
