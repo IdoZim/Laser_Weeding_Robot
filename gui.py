@@ -106,8 +106,8 @@ def move_to():
     else:
         point = 0
         camera_xyz = points[point]
-        print("Finished. moving to home position")
-        move_to_home_pos()
+        # print("Finished. moving to home position")
+        # move_to_home_pos()
 
 def camera_save():
     global camera_xyz, points, point #, camera_angles

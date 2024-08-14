@@ -87,8 +87,8 @@ def cartesian_action_movement(base, base_cyclic, target): # Set 6 coordinates to
 
     cartesian_pose = action.reach_pose.target_pose
     cartesian_pose.x = target[0]            # (meters)
-    cartesian_pose.y = target[1]            # (meters)
-    cartesian_pose.z = target[2]            # (meters) ((for relative movement: feedback.base.tool_pose_z  + relative move))
+    cartesian_pose.y = target[1] - 0.005           # (meters)
+    cartesian_pose.z = target[2] + 0.009           # (meters) ((for relative movement: feedback.base.tool_pose_z  + relative move))
     cartesian_pose.theta_x = feedback.base.tool_pose_theta_x  # + angular_move[0] # (degrees)
     cartesian_pose.theta_y = feedback.base.tool_pose_theta_y #angular_move[1] # (degrees)
     cartesian_pose.theta_z = feedback.base.tool_pose_theta_z #+ angular_move[2] # (degrees)
