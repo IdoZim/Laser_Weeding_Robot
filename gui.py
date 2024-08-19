@@ -22,12 +22,12 @@ base = None
 base_cyclic = None
 device_connection = None
 
+# Target points handle
 camera_xyz = [0,0,0]
 points=[]
 point = 0
 current_pose = []
-
-camera_angles = [0,0,0]
+targets = []
 
 arduino = None
 laser_on = '0'
@@ -72,34 +72,23 @@ def connect_to_robot():
     base = BaseClient(device_connection.router)
     base_cyclic = BaseCyclicClient(device_connection.router)
     current_pose = robot_movement.get_current_pose(base_cyclic)
-    print("Connected")
+    print("Robot Connected")
 
 def move_to_home_pos():
     global base, base_cyclic, device_connection, current_pose
+    laser_point('0')
     robot_movement.move_to_home_position(base, base_cyclic)
     current_pose = robot_movement.get_current_pose(base_cyclic)
     print("Home")
     
 def move_to():
-    global base, base_cyclic, device_connection, camera_xyz, point,points, camera_angles
-    target = [0,0,0,0,0,0]  # x, y, z, t_x, t_y, t_z
-    if camera_xyz[2] > 0.3:
-        target[0] = current_pose[0] + camera_xyz[2] - 0.3  # Robot's X = Camera's Z
-    else:
-        target[0] = current_pose[0]
-    target[1] = current_pose[1] + (-camera_xyz[0])  # Robot's Y = Camera's X
-    target[2] = current_pose[2] + (-camera_xyz[1])    # Robot's Z = Camera's Y
-
-    # target[3] = camera_angles[0]
-    # target[4] = -camera_angles[0]
-    # target[5] = -camera_angles[1]
-    # temp = target
-    # target[3] = -temp[1]
-    # target[4] = temp[0]
-    # target[5] = temp[2]
+    global base, base_cyclic, device_connection, camera_xyz, point,points
+    target = targets[point]
+    laser_point('0')
     print(f"Moving to point {point}")
-    print(target)
-    robot_movement.cartesian_action_movement(base, base_cyclic, target)
+    finish = robot_movement.cartesian_action_movement(base, base_cyclic, target)
+    if finish:
+        laser_point('1')
     point = point + 1
     if len(points) > point:
         camera_xyz = points[point]
@@ -107,34 +96,44 @@ def move_to():
     else:
         point = 0
         camera_xyz = points[point]
-        # print("Finished. moving to home position")
-        # move_to_home_pos()
+        print("Finished all points")
+
+def create_targets():
+    global targets, camera_xyz, current_pose, points
+    targets = []    
+    for j in range(len(points)):
+        target = [0, 0, 0, 0, 0, 0] # X, Y, Z, t_x, t_y, t_z
+        camera_xyz = points[j]
+
+        if camera_xyz[2] > 0.3:
+            target[0] = current_pose[0] + camera_xyz[2] - 0.3  # Robot's X = Camera's Z
+        else:
+            target[0] = current_pose[0]
+        target[1] = current_pose[1] + (-camera_xyz[0])  # Robot's Y = Camera's X
+        target[2] = current_pose[2] + (-camera_xyz[1])    # Robot's Z = Camera's Y
+        targets.append(target)
 
 def camera_save():
-    global camera_xyz, points, point, current_pose, base_cyclic #, camera_angles
-    points =shape_detector.save_current_frame(0) # Camera's X,Y,Z TODO: convert to robot's XYZ
+    global points, current_pose, base_cyclic, point
     point = 0
+    points = []
+    points =shape_detector.save_current_frame(0) # Camera's X,Y,Z TODO: convert to robot's XYZ
+    center_xyz_label.config(text=f' Number of points : {len(points)}')
     current_pose = robot_movement.get_current_pose(base_cyclic)
-    print(current_pose)
-    camera_xyz = points[0]
-    center_xyz_label.config(text=f"X = {camera_xyz[0]:.2f} , Y = {camera_xyz[1]:.2f}, Z = {camera_xyz[2]:.2f}")
-    # angles_label.config(text=f"X = {camera_angles[0]:.2f}, Y = {camera_angles[1]:.2f}, Z = {camera_angles[2]:2f}")
-    print(f' Number of points : {len(points)}')
+    print(points)
+    create_targets()
 
 def camera_connect():
     shape_detector.start_camera()
-    print("Connected to camera")
+    print("Camera Connected")
 
 def laser_connect():
     global arduino
     arduino = laser_switch.connect()
+    print("Laser Connected")
 
-def laser_point():
-    global arduino, laser_on
-    if laser_on == '1':
-        laser_on = '0'
-    else:
-        laser_on = '1'
+def laser_point(laser_on):
+    global arduino 
     laser_switch.send_command(arduino, laser_on)
     
 
