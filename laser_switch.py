@@ -9,5 +9,6 @@ def connect():
 def send_command(arduino, command):
     arduino.write(command.encode())
 
-def disconnect(arduino):
+def disconnect(arduino, command):
+    arduino.write(command.encode())
     arduino.close()

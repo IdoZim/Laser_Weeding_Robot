@@ -43,7 +43,7 @@ def close_window():
     base = None
     base_cyclic = None
     device_connection = None
-    laser_switch.disconnect(arduino)
+    laser_switch.disconnect(arduino, '1')
     window.destroy()
 
 def connect_to_robot():
@@ -86,7 +86,7 @@ def move_to():
     if camera_xyz[2] > 0.3:
         target[0] = current_pose[0] + camera_xyz[2] - 0.3  # Robot's X = Camera's Z
     else:
-        target[0] = 0
+        target[0] = current_pose[0]
     target[1] = current_pose[1] + (-camera_xyz[0])  # Robot's Y = Camera's X
     target[2] = current_pose[2] + (-camera_xyz[1])    # Robot's Z = Camera's Y
 
@@ -98,6 +98,7 @@ def move_to():
     # target[4] = temp[0]
     # target[5] = temp[2]
     print(f"Moving to point {point}")
+    print(target)
     robot_movement.cartesian_action_movement(base, base_cyclic, target)
     point = point + 1
     if len(points) > point:
@@ -110,9 +111,11 @@ def move_to():
         # move_to_home_pos()
 
 def camera_save():
-    global camera_xyz, points, point #, camera_angles
+    global camera_xyz, points, point, current_pose, base_cyclic #, camera_angles
     points =shape_detector.save_current_frame(0) # Camera's X,Y,Z TODO: convert to robot's XYZ
     point = 0
+    current_pose = robot_movement.get_current_pose(base_cyclic)
+    print(current_pose)
     camera_xyz = points[0]
     center_xyz_label.config(text=f"X = {camera_xyz[0]:.2f} , Y = {camera_xyz[1]:.2f}, Z = {camera_xyz[2]:.2f}")
     # angles_label.config(text=f"X = {camera_angles[0]:.2f}, Y = {camera_angles[1]:.2f}, Z = {camera_angles[2]:2f}")
