@@ -89,7 +89,7 @@ def move_to():
     finish = robot_movement.cartesian_action_movement(base, base_cyclic, target)
     if finish:
         laser_point('1')
-        current_pose = robot_movement.get_current_pose(base_cyclic)
+        # current_pose = robot_movement.get_current_pose(base_cyclic)
     point = point + 1
     if len(points) > point:
         camera_xyz = points[point]
@@ -98,7 +98,7 @@ def move_to():
         point = 0
         camera_xyz = points[point]
         print("Finished all points")
-        current_pose = robot_movement.get_current_pose(base_cyclic)
+        # current_pose = robot_movement.get_current_pose(base_cyclic)
 
 def create_targets():
     global targets, camera_xyz, current_pose, points
@@ -116,6 +116,7 @@ def create_targets():
         target[1] = current_pose[1] + (-camera_xyz[0])  # Robot's Y = Camera's X
         target[2] = current_pose[2] + (-camera_xyz[1])    # Robot's Z = Camera's Y
         targets.append(target)
+    print(f"targets: {targets}")
 
 def camera_save():
     global points, current_pose, base_cyclic, point
@@ -124,6 +125,7 @@ def camera_save():
     points =shape_detector.save_current_frame(0) # Camera's X,Y,Z TODO: convert to robot's XYZ
     center_xyz_label.config(text=f' Number of points : {len(points)}')
     current_pose = robot_movement.get_current_pose(base_cyclic)
+    print(f"points: {points}")
     create_targets()
 
 def camera_connect():

@@ -104,8 +104,6 @@ def update_frame(flag=1):
                     print_str = [float(point_in_3d[0]), float(point_in_3d[1]), float(point_in_3d[2])]
                     print_str = str([round(num,3) for num in print_str])
                     cv2.putText(color_image, print_str, (cx-200, cy - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
-                    hsv = [hsv_image[cy,cx,:]]
-                    cv2.putText(color_image, str(hsv), (cx, cy - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
                     if flag == 0:
                         xyz = [float(point_in_3d[0]), float(point_in_3d[1]), float(point_in_3d[2])]
                         # xyz = [round(num,3) for num in xyz]
@@ -124,6 +122,7 @@ def save_current_frame(f):
     
 def correction():
     global points, laser_pos
+    points = []
     update_frame(flag=0)
     min_dist = 10
     offset = [0, 0]
@@ -135,6 +134,7 @@ def correction():
             min_dist = distance
             offset = [dx, dy]
             tar = point
+    print(f"target: {tar} \n Laser: {laser_pos}")
     return offset
 
 def show_camera_feed():
