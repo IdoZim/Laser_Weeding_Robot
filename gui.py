@@ -89,6 +89,7 @@ def move_to():
     finish = robot_movement.cartesian_action_movement(base, base_cyclic, target)
     if finish:
         laser_point('1')
+        current_pose = robot_movement.get_current_pose(base_cyclic)
     point = point + 1
     if len(points) > point:
         camera_xyz = points[point]
@@ -97,16 +98,19 @@ def move_to():
         point = 0
         camera_xyz = points[point]
         print("Finished all points")
+        current_pose = robot_movement.get_current_pose(base_cyclic)
 
 def create_targets():
     global targets, camera_xyz, current_pose, points
     targets = []    
+    distance = 0.3
+    current_pose = robot_movement.get_current_pose(base_cyclic)
     for j in range(len(points)):
         target = [0, 0, 0, 0, 0, 0] # X, Y, Z, t_x, t_y, t_z
         camera_xyz = points[j]
 
-        if camera_xyz[2] > 0.3:
-            target[0] = current_pose[0] + camera_xyz[2] - 0.3  # Robot's X = Camera's Z
+        if camera_xyz[2] > distance:
+            target[0] = current_pose[0] + camera_xyz[2] - distance  # Robot's X = Camera's Z
         else:
             target[0] = current_pose[0]
         target[1] = current_pose[1] + (-camera_xyz[0])  # Robot's Y = Camera's X
@@ -120,7 +124,6 @@ def camera_save():
     points =shape_detector.save_current_frame(0) # Camera's X,Y,Z TODO: convert to robot's XYZ
     center_xyz_label.config(text=f' Number of points : {len(points)}')
     current_pose = robot_movement.get_current_pose(base_cyclic)
-    print(points)
     create_targets()
 
 def camera_connect():
@@ -135,7 +138,23 @@ def laser_connect():
 def laser_point(laser_on):
     global arduino 
     laser_switch.send_command(arduino, laser_on)
+
+def correction():
+    correct_offset = [0,0,0]
+    current_pose = robot_movement.get_current_pose(base_cyclic)
+    offset = shape_detector.correction()
+    offset = [round(num,4) for num in offset]
+    print(f"Offset= {offset}")
+    correct_offset[0] = current_pose[0]
+    correct_offset[1] = current_pose[1] + (-offset[0])  # Robot's Y = Camera's -X
+    correct_offset[2] = current_pose[2] + (-offset[1])    # Robot's Z = Camera's -Y
+    print(f"Current pos = {current_pose[:3]}")
     
+    print(f"Command: {correct_offset}")
+    robot_movement.cartesian_action_movement(base, base_cyclic, correct_offset)
+    correct_offset = [0,0,0]
+    current_pose = robot_movement.get_current_pose(base_cyclic)
+        
 
 ## GUI settingss ##
 
@@ -157,7 +176,10 @@ home_button = Button(text="Home", command=move_to_home_pos)
 home_button.place(x=190, y=70)
 
 move_button = Button(text="Move to", command=move_to)
-move_button.place(x=190, y=110)
+move_button.place(x=110, y=110)
+
+correction_button = Button(text="Correction", command=correction)
+correction_button.place(x=190, y=110)
 
 camera_connect_button = Button(text="Connect", command=camera_connect)
 camera_connect_button.place(x=440, y=70)

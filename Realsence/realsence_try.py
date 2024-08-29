@@ -49,6 +49,11 @@ align = rs.align(rs.stream.depth)
 # Create mask for green color
 green_range = ((35, 50, 40), (105, 150, 255))
 
+
+# Create mask for red color
+red_range1 = ((0, 50, 40), (30, 200, 255))
+red_range2 = ((160, 50, 40), (250, 200, 255))
+
 # Frame dimensions
 frame_width = 1280
 frame_height = 720
@@ -68,18 +73,21 @@ try:
         # Convert BGR to HSV for color detection
         hsv_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2HSV)
 
-        # Create mask for green color
-        green_range = ((35, 50, 40), (55, 200, 255))
-        
+
         mask = cv2.inRange(hsv_image, green_range[0], green_range[1])
+        mask2= cv2.inRange(hsv_image, red_range1[0], red_range1[1])
+        mask3= cv2.inRange(hsv_image, red_range2[0], red_range2[1])
+        mask_red = mask2+mask3
+
+
         # Find contours
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(mask_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # color_image = cv2.drawContours(color_image, contours, -1, (255,0,0),2)
         ind = -1
         for contour in contours:
             ind += 1
             contArea = cv2.contourArea(contour)
-            if contArea > 5:
+            if contArea > 1:
                 rect = cv2.minAreaRect(contour)
                 box = cv2.boxPoints(rect)
                 box = np.intp(box)
