@@ -14,16 +14,15 @@ from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2
 import shape_detector
 import laser_switch
 import serial
+import pandas as pd
 
 TIMEOUT_DURATION = 20
-
 ## Robot base
 base = None
 base_cyclic = None
 device_connection = None
 
 # Target points handle
-camera_xyz = [0,0,0]
 points=[]
 point = 0
 current_pose = []
@@ -31,6 +30,9 @@ targets = []
 
 arduino = None
 laser_on = '0'
+
+headers = ["Point #", "Target x", "Target y", "Target z", "x", "y", "z", "Corrected x", "Corrected y", "Corrected z"]
+df = pd.DataFrame(columns=headers)
 
 def close_window():
     global base, base_cyclic, device_connection, arduino
@@ -75,14 +77,16 @@ def connect_to_robot():
     print("Robot Connected")
 
 def move_to_home_pos():
-    global base, base_cyclic, device_connection, current_pose
+    global base, base_cyclic, device_connection, current_pose, df
     laser_point('0')
     robot_movement.move_to_home_position(base, base_cyclic)
     current_pose = robot_movement.get_current_pose(base_cyclic)
+    new_line = ["Home","Home_x", "Home_y", "Home_z" ,current_pose[0], current_pose[1], current_pose[2],None, None, None]
+    df.loc[len(df)] = new_line
     print("Home")
     
 def move_to():
-    global base, base_cyclic, device_connection, camera_xyz, point,points
+    global base, base_cyclic, device_connection, point, points
     target = targets[point]
     laser_point('0')
     print(f"Moving to point {point}")
@@ -91,17 +95,13 @@ def move_to():
         laser_point('1')
         # current_pose = robot_movement.get_current_pose(base_cyclic)
     point = point + 1
-    if len(points) > point:
-        camera_xyz = points[point]
-        
-    else:
+    if len(points) <= point:
+        # camera_xyz = points[point]
         point = 0
-        camera_xyz = points[point]
         print("Finished all points")
-        # current_pose = robot_movement.get_current_pose(base_cyclic)
 
 def create_targets():
-    global targets, camera_xyz, current_pose, points
+    global targets, current_pose, points
     targets = []    
     distance = 0.3
     current_pose = robot_movement.get_current_pose(base_cyclic)
@@ -193,11 +193,8 @@ laser_button.place(x=400, y=130)
 laser_connection = Button(text="Laser connect", command=laser_connect)
 laser_connection.place(x=440, y=130)
 
-center_xyz_label = Label(text="X, Y, Z")
+center_xyz_label = Label(text="Number of points")
 center_xyz_label.place(x=520, y=100)
-
-# angles_label = Label(text="X, Y, Z")
-# angles_label.place(x=520, y=140)
 
 # window.protocol("WM_DELETE_WINDOW", close_window)
 window.mainloop()
