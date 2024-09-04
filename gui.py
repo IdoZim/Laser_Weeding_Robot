@@ -27,9 +27,9 @@ points=[]
 point = 0
 current_pose = []
 targets = []
+distance = 0.3
 
 arduino = None
-laser_on = '0'
 
 headers = ["Point #", "Target x", "Target y", "Target z", "x", "y", "z", "Corrected x", "Corrected y", "Corrected z"]
 df = pd.DataFrame(columns=headers)
@@ -86,24 +86,25 @@ def move_to_home_pos():
     print("Home")
     
 def move_to():
-    global base, base_cyclic, device_connection, point, points
+    global point, df
     target = targets[point]
     laser_point('0')
     print(f"Moving to point {point}")
     finish = robot_movement.cartesian_action_movement(base, base_cyclic, target)
     if finish:
         laser_point('1')
-        # current_pose = robot_movement.get_current_pose(base_cyclic)
+        current_pose = robot_movement.get_current_pose(base_cyclic)
+        new_line = [int(point + 1), target[0], target[1], target[2], current_pose[0], current_pose[1], current_pose[2], None, None, None]
+        df.loc[len(df)] = new_line
     point = point + 1
     if len(points) <= point:
-        # camera_xyz = points[point]
         point = 0
         print("Finished all points")
+        
 
 def create_targets():
-    global targets, current_pose, points
+    global targets, current_pose, points, file_name
     targets = []    
-    distance = 0.3
     current_pose = robot_movement.get_current_pose(base_cyclic)
     for j in range(len(points)):
         target = [0, 0, 0, 0, 0, 0] # X, Y, Z, t_x, t_y, t_z
@@ -118,7 +119,7 @@ def create_targets():
         targets.append(target)
 
 def camera_save():
-    global points, current_pose, base_cyclic, point
+    global points, current_pose, point
     point = 0
     points = []
     points =shape_detector.save_current_frame(0) # Camera's X,Y,Z TODO: convert to robot's XYZ
@@ -129,15 +130,17 @@ def camera_save():
 def camera_connect():
     shape_detector.start_camera()
     print("Camera Connected")
+    laser_connect()
+
+def laser_point(laser_on):
+    global arduino 
+    laser_switch.send_command(arduino, laser_on)
 
 def laser_connect():
     global arduino
     arduino = laser_switch.connect()
     print("Laser Connected")
-
-def laser_point(laser_on):
-    global arduino 
-    laser_switch.send_command(arduino, laser_on)
+    laser_point('0')
 
 def correction():
     correct_offset = [0,0,0]
@@ -155,6 +158,19 @@ def correction():
     correct_offset = [0,0,0]
     current_pose = robot_movement.get_current_pose(base_cyclic)
         
+def get_distance():
+    global distance
+    distance = (float(insert_distance.get())) / 100.0
+    print(distance)
+
+def clear_entry(event, default_text):
+    if event.widget.get() == default_text:
+        event.widget.delete(0, END)
+
+def create_file():
+    global df, distance
+    file_name = str(insert_file_name.get()) + f"_distance_{distance*100}_cm.xlsx"
+    df.to_excel(file_name, index=True, index_label='Step') 
 
 ## GUI settingss ##
 
@@ -162,39 +178,52 @@ window = Tk()
 window.title("Laser Weeding Robot")
 window.minsize(width=700, height=500)
 window.config(padx=10, pady=20, bg="#071952")
+###############################################
+robot_label = Label(text="Robot", font=("Arial", 36), bg="#071952", fg="white")
+robot_label.grid(column=0, row=0, columnspan=2, padx=100)
 
-robot_label = Label(padx=100, text="Robot", font=("Arial", 36), bg="#071952", fg="white")
-robot_label.grid(column=0, row=0)
+connect_button = Button(padx=15,text="Robot Connect", command=connect_to_robot)
+connect_button.grid(column=0, row=1, pady=10)
 
-camera_label = Label(padx=100, text="Camera", font=("Arial", 36), bg="#071952", fg="white")
-camera_label.grid(column=2, row=0)
+home_button = Button(padx=15,text="Home", command=move_to_home_pos)
+home_button.grid(column=1, row=1, pady=10)
 
-connect_button = Button(text="Connect", command=connect_to_robot)
-connect_button.place(x=110, y=70)
+move_button = Button(padx=15,text="Move to", command=move_to)
+move_button.grid(column=0, row=2, pady=10)
 
-home_button = Button(text="Home", command=move_to_home_pos)
-home_button.place(x=190, y=70)
+correction_button = Button(padx=15,text="Correction", command=correction)
+correction_button.grid(column=1, row=2, pady=10)
+#########################################################
+camera_label = Label(text="Camera", font=("Arial", 36), bg="#071952", fg="white")
+camera_label.grid(column=2, row=0, columnspan=2, padx=100)
 
-move_button = Button(text="Move to", command=move_to)
-move_button.place(x=110, y=110)
+camera_connect_button = Button(padx=15,text="Camera Connect", command=camera_connect) # connect to camera and laser
+camera_connect_button.grid(column=2, row=1, pady=10)
 
-correction_button = Button(text="Correction", command=correction)
-correction_button.place(x=190, y=110)
-
-camera_connect_button = Button(text="Connect", command=camera_connect)
-camera_connect_button.place(x=440, y=70)
-
-camera_save_button = Button(text="Save", command=camera_save)
-camera_save_button.place(x=520, y=70)
-
-laser_button = Button(text="Laser", command=laser_point)
-laser_button.place(x=400, y=130)
-
-laser_connection = Button(text="Laser connect", command=laser_connect)
-laser_connection.place(x=440, y=130)
+camera_save_button = Button(padx=15,text="Save", command=camera_save)
+camera_save_button.grid(column=3, row=1, pady=10)
 
 center_xyz_label = Label(text="Number of points")
-center_xyz_label.place(x=520, y=100)
+center_xyz_label.grid(column=3, row=2, pady=10)
+######################################################
+settings_label = Label(padx=100, text="Settings", font=("Arial", 36), bg="#071952", fg="white")
+settings_label.grid(column=0, row=3, columnspan=2, padx=100)
+
+submit_settings = Button(padx=15, text='Submit distance', command=get_distance)
+submit_settings.grid(column=1, row=4, pady=10)
+
+insert_distance = Entry()
+insert_distance.insert(0, 'Enter distance in cm')
+insert_distance.bind("<FocusIn>", lambda event: clear_entry(event, "Enter distance in cm"))
+insert_distance.grid(column=0, row=4, pady=10)
+
+insert_file_name = Entry()
+insert_file_name.insert(0, 'Enter file name')
+insert_file_name.bind("<FocusIn>", lambda event: clear_entry(event, "Enter file name"))
+insert_file_name.grid(column=0, row=5, pady=10)
+
+submit_file = Button(padx=15, text='Create xlsx file', command=create_file)
+submit_file.grid(column=1, row=5, pady=10)
 
 # window.protocol("WM_DELETE_WINDOW", close_window)
 window.mainloop()
