@@ -43,12 +43,15 @@
 4. Move to the next target.
 5. Repeat the experiment with: *point -> Home -> point*
 
-
-
 ## Usage
-```python
-code code code
-```
+1. Create connection to the camera and the laser using `Camera connect` button
+2. Create connection to the robot using `Robot connect` button
+3. Define the required distance from the target and submit it
+4. Take the robot to it's Home position `Home` button
+5. Create targets using `save` button
+6. Move through the targets using `Move to` button
+7. *optional*: Make correction with `Correction` button
+8. Enter file name and create excle file
 ## Main script
 **explain** with bold
 - explain with bullets

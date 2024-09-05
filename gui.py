@@ -100,10 +100,9 @@ def move_to():
     if len(points) <= point:
         point = 0
         print("Finished all points")
-        
 
 def create_targets():
-    global targets, current_pose, points, file_name
+    global targets, current_pose, points
     targets = []    
     current_pose = robot_movement.get_current_pose(base_cyclic)
     for j in range(len(points)):
@@ -145,15 +144,14 @@ def laser_connect():
 def correction():
     correct_offset = [0,0,0]
     current_pose = robot_movement.get_current_pose(base_cyclic)
+
     offset = shape_detector.correction()
     offset = [round(num,4) for num in offset]
-    print(f"Offset= {offset}")
+
     correct_offset[0] = current_pose[0]
     correct_offset[1] = current_pose[1] + (-offset[0])  # Robot's Y = Camera's -X
     correct_offset[2] = current_pose[2] + (-offset[1])    # Robot's Z = Camera's -Y
-    print(f"Current pos = {current_pose[:3]}")
-    
-    print(f"Command: {correct_offset}")
+
     robot_movement.cartesian_action_movement(base, base_cyclic, correct_offset)
     correct_offset = [0,0,0]
     current_pose = robot_movement.get_current_pose(base_cyclic)
@@ -169,8 +167,14 @@ def clear_entry(event, default_text):
 
 def create_file():
     global df, distance
-    file_name = str(insert_file_name.get()) + f"_distance_{distance*100}_cm.xlsx"
-    df.to_excel(file_name, index=True, index_label='Step') 
+    file_name = './data/' + str(insert_file_name.get()) + f"_distance_{int(distance*100)}_cm.xlsx"
+    extra_row = ["Distance from targets:", distance*100, 'cm']
+    with pd.ExcelWriter(file_name, engine='openpyxl') as writer:
+    # Write the extra row manually before the DataFrame
+        pd.DataFrame([extra_row]).to_excel(writer, header=False, index=False, startrow=0)
+        df.to_excel(writer, index=True, index_label='Step', startrow=1) 
+    print(f"Excel file created \n {file_name}")
+    df = pd.DataFrame(columns=headers)
 
 ## GUI settingss ##
 
